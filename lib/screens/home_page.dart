@@ -11,6 +11,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  bool _isLoading = false;
   final TextEditingController _textController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [
     {'isUser': true, 'text': 'Hi there! How are you doing today?'},
@@ -19,10 +20,16 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isLoading) return;
     _messages.add({'isUser': true, 'text': text});
     _textController.clear();
+    _isLoading = true;
+    setState(() {});
 
+    await Future.delayed(Duration(seconds: 3));
+
+    _messages.add({"isUser": false, "text": "Thanh you for your message!"});
+    _isLoading = false;
     setState(() {});
   }
 
@@ -58,6 +65,24 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
               ),
+
+            // Loader Ui
+            if (_isLoading)
+              Padding(
+                padding: .symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(),
+                    ),
+                    const SizedBox(width: 8),
+                    Text("AI is thinking..."),
+                  ],
+                ),
+              ),
+
             Row(
               children: [
                 Expanded(
@@ -73,7 +98,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
-                  onPressed: _sendMessage,
+                  onPressed: _isLoading ? null : _sendMessage,
                   icon: Icon(Icons.send),
                 ),
               ],

@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../widgets/chat_bubble.dart';
 import '../widgets/empty_chat_placeholder.dart';
+
+import 'package:http/http.dart' as http;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,11 +30,50 @@ class _HomePageState extends State<HomePage> {
     _isLoading = true;
     setState(() {});
 
-    await Future.delayed(Duration(seconds: 3));
+    final aiResponse = await _fetchAiResponse(text);
 
-    _messages.add({"isUser": false, "text": "Thanh you for your message!"});
+    _messages.add({"isUser": false, "text": aiResponse});
     _isLoading = false;
     setState(() {});
+  }
+
+  Future<String> _fetchAiResponse(String prompt) async {
+    const apiKey = String.fromEnvironment('OPENAI_API_KEY');
+    if (apiKey.isEmpty) {
+      return 'Missing OPENAI_API_KEY. Run with --dart-define=OPENAI_API_KEY=...';
+    }
+    final client = http.Client();
+
+    final response = await client.post(
+      Uri.parse('https://api.openai.com/v1/responses'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $apiKey',
+      },
+      body: json.encode({
+        'model': 'gpt-4.1',
+        'input': prompt,
+      }),
+    );
+
+    final decoded = json.decode(response.body);
+    if (decoded is Map<String, dynamic> && response.statusCode == 200) {
+      final output = decoded['output'];
+      if (output is List && output.isNotEmpty) {
+        final firstOutput = output[0];
+        if (firstOutput is Map<String, dynamic>) {
+          final content = firstOutput['content'];
+          if (content is List && content.isNotEmpty) {
+            final firstContent = content[0];
+            if (firstContent is Map<String, dynamic>) {
+              return firstContent['text'] as String? ?? "No response";
+            }
+          }
+        }
+      }
+    }
+
+    return "No response";
   }
 
   @override
